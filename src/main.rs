@@ -5,8 +5,7 @@ extern crate rocket;
 
 use crate::kindle::Kindle;
 use rocket::http::Status;
-use rocket::response;
-use rocket::{http::ContentType, response::Redirect};
+use rocket::{http::ContentType, response};
 use serde_json::json;
 use std::io::Cursor;
 
@@ -50,12 +49,30 @@ fn get_kindle<'r>(kindle_no: i32) -> response::Result<'r> {
         .sized_body(Cursor::new(json))
         .ok()
 }
-#[get("/kindle/<kindle_no>/download")]
-fn download_latest(kindle_no: i32) -> Option<Redirect> {
+#[get("/kindle/<kindle_no>/download?<version>")]
+fn download_latest<'r>(kindle_no: i32, version: Option<String>) -> response::Result<'r> {
     let vector = kindle::Kindle::scrape_ota();
-    let kindle = vector.into_iter().nth(kindle_no as usize)?;
-    let dw_link = kindle.dw_link();
-    Some(Redirect::to(dw_link))
+    let kindle = vector.into_iter().nth(kindle_no as usize);
+    if kindle.is_none() {
+        return Err(Status::NotFound);
+    }
+    if version.is_some()
+        && !matches!(
+            kindle.as_ref().unwrap().version().cmp(&version.unwrap()),
+            std::cmp::Ordering::Greater
+        )
+    {
+        return response::Response::build()
+            .header(ContentType::Plain)
+            .status(Status::BadRequest)
+            .sized_body(Cursor::new(constant::UPDATED))
+            .ok();
+    }
+    let dw_link = kindle.unwrap().dw_link();
+    response::Response::build()
+        .status(Status::SeeOther)
+        .raw_header("Location", dw_link)
+        .ok()
 }
 fn main() {
     rocket::ignite()

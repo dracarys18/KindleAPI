@@ -1,7 +1,6 @@
 use crate::constant;
 use select::document::Document;
 use select::predicate::{Attr, Class, Name, Predicate};
-use serde_json::Value;
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Kindle {
@@ -13,7 +12,22 @@ pub struct Kindle {
 }
 
 impl Kindle {
-    pub fn scrape_ota() -> Value {
+    pub fn sno(&self) -> i8 {
+        self.sno
+    }
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+    pub fn version(&self) -> String {
+        self.version.clone()
+    }
+    pub fn dw_link(&self) -> String {
+        self.dw_link.clone()
+    }
+    pub fn release_notes(&self) -> String {
+        self.release_notes.clone()
+    }
+    pub fn scrape_ota() -> Vec<Kindle> {
         let mut kindvec = Vec::<Kindle>::new();
         let resp = reqwest::blocking::get(constant::URL).unwrap();
         let doc = Document::from(resp.text().unwrap().as_str());
@@ -46,6 +60,6 @@ impl Kindle {
                 release_notes: rnotes,
             });
         }
-        serde_json::json!(kindvec)
+        kindvec
     }
 }

@@ -4,15 +4,21 @@ use select::predicate::{Attr, Class, Name, Predicate};
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Kindle {
-    sno: i8,
+    sno: i32,
     name: String,
     version: String,
     dw_link: String,
     release_notes: String,
 }
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct UpdatableJson {
+    sno: i32,
+    name: String,
+    updatable: bool,
+}
 
 impl Kindle {
-    pub fn sno(&self) -> i8 {
+    pub fn sno(&self) -> i32 {
         self.sno
     }
     pub fn name(&self) -> String {
@@ -53,7 +59,7 @@ impl Kindle {
             let dw = links[0].to_string();
             let rnotes = links.into_iter().nth(1).unwrap_or("").to_string();
             kindvec.push(Kindle {
-                sno: i as i8,
+                sno: i as i32,
                 name: kindle_name.to_string(),
                 version: ver,
                 dw_link: dw,
@@ -61,5 +67,14 @@ impl Kindle {
             });
         }
         kindvec
+    }
+}
+impl UpdatableJson {
+    pub fn from_kindle(k: &Kindle, u: bool) -> UpdatableJson {
+        Self {
+            sno: k.sno,
+            name: k.name.clone(),
+            updatable: u,
+        }
     }
 }

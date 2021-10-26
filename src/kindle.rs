@@ -1,4 +1,5 @@
 use crate::constant;
+use reqwest::header::{CONTENT_TYPE, REFERER, USER_AGENT};
 use select::document::Document;
 use select::predicate::{Attr, Class, Name, Predicate};
 
@@ -10,6 +11,7 @@ pub struct Kindle {
     dw_link: String,
     release_notes: String,
 }
+
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct UpdatableJson {
     sno: i32,
@@ -35,7 +37,14 @@ impl Kindle {
     }
     pub fn scrape_ota() -> Vec<Kindle> {
         let mut kindvec = Vec::<Kindle>::new();
-        let resp = reqwest::blocking::get(constant::URL).unwrap();
+        let client = reqwest::blocking::Client::new();
+        let resp = client
+            .get(constant::URL)
+            .header(USER_AGENT, constant::USER_AGENT_HEADER)
+            .header(REFERER, constant::REFERRER_HEADER)
+            .header(CONTENT_TYPE, constant::CONTENT_TYPE_HEADER)
+            .send()
+            .unwrap();
         let doc = Document::from(resp.text().unwrap().as_str());
         for (i, node) in doc.find(Class("cs-help-landing-section")).enumerate() {
             let kindle_name = &node
@@ -69,6 +78,7 @@ impl Kindle {
         kindvec
     }
 }
+
 impl UpdatableJson {
     pub fn from_kindle(k: &Kindle, u: bool) -> UpdatableJson {
         Self {

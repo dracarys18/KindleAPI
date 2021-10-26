@@ -5,9 +5,10 @@ extern crate rocket;
 
 use crate::kindle::{Kindle, UpdatableJson};
 use rocket::http::Status;
-use rocket::{http::ContentType, response};
+use rocket::{Config, http::ContentType, response};
 use serde_json::json;
 use std::io::Cursor;
+use rocket::config::Environment;
 
 mod constant;
 mod kindle;
@@ -28,6 +29,7 @@ fn index() -> String {
     }
     instruction
 }
+
 #[get("/json")]
 fn json<'r>() -> response::Result<'r> {
     let json = serde_json::to_string_pretty(&json!(Kindle::scrape_ota())).unwrap();
@@ -36,6 +38,7 @@ fn json<'r>() -> response::Result<'r> {
         .sized_body(Cursor::new(json))
         .ok()
 }
+
 #[get("/kindle/<kindle_no>")]
 fn get_kindle<'r>(kindle_no: i32) -> response::Result<'r> {
     let vector = Kindle::scrape_ota();
@@ -49,6 +52,7 @@ fn get_kindle<'r>(kindle_no: i32) -> response::Result<'r> {
         .sized_body(Cursor::new(json))
         .ok()
 }
+
 #[get("/kindle/<kindle_no>/download?<version>")]
 fn download_latest<'r>(kindle_no: i32, version: Option<String>) -> response::Result<'r> {
     let vector = kindle::Kindle::scrape_ota();
@@ -74,6 +78,7 @@ fn download_latest<'r>(kindle_no: i32, version: Option<String>) -> response::Res
         .raw_header("Location", dw_link)
         .ok()
 }
+
 #[get("/<kindle_no>/updatable?<version>")]
 fn updatable<'r>(kindle_no: i32, version: Option<String>) -> response::Result<'r> {
     let v = Kindle::scrape_ota();
@@ -92,14 +97,17 @@ fn updatable<'r>(kindle_no: i32, version: Option<String>) -> response::Result<'r
         &kindle.unwrap(),
         updatable
     )))
-    .unwrap();
+        .unwrap();
     response::Response::build()
         .header(ContentType::JSON)
         .sized_body(Cursor::new(json))
         .ok()
 }
+
 fn main() {
-    rocket::ignite()
+    let port = std::env::var("PORT").unwrap_or("8000".to_string());
+    let config = Config::build(Environment::Production).port(port.parse().unwrap()).finalize().unwrap();
+    rocket::custom(config)
         .mount(
             "/",
             routes![index, json, get_kindle, download_latest, updatable],
